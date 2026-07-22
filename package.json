@@ -1,0 +1,10 @@
+{
+  "name": "tur138-dependency-bridge",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}
