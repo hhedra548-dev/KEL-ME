@@ -1,0 +1,2 @@
+https://auth.docker.io/token?service=registry.docker.io&scope=repository:kicad/kicad:pull
+https://registry-1.docker.io/v2/kicad/kicad/manifests/9.0.2-amd64
