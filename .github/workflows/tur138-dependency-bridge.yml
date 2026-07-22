@@ -20,6 +20,10 @@ jobs:
         with:
           node-version: '22.16.0'
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: Reconstruct Tur138 dependency manifest
         shell: bash
         run: |
@@ -87,11 +91,12 @@ jobs:
           tar -czf output/node_modules.tar.gz node_modules
           sha256sum output/generated-package-lock.json output/node_modules.tar.gz > output/npm-artifacts.sha256
 
-      - name: Build pglast dependency bundle
+      - name: Build Python 3.13 pglast dependency bundle
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --target output/pglast-site pglast
+          python -m pip install --target output/pglast-site 'pglast==8.2'
+          python -c "import sys; sys.path.insert(0, 'output/pglast-site'); from pglast import parse_sql; assert parse_sql('select 1')"
           tar -C output -czf output/pglast-site.tar.gz pglast-site
           rm -rf output/pglast-site
           sha256sum output/pglast-site.tar.gz > output/pglast-artifact.sha256
