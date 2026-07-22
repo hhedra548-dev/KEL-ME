@@ -23,7 +23,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates xz-utils
           mkdir -p /work/debs/partial
-          apt-get -y --download-only \
+          apt-get -y --download-only --no-install-recommends \
             -o Dir::Cache::archives=/work/debs/ \
             install kicad=9.0.2+dfsg-1
 
@@ -38,20 +38,21 @@ jobs:
           find /work/debs -maxdepth 1 -type f -name '*.deb' -print0 | sort -z | xargs -0 sha256sum > /work/DEB_SHA256SUMS.txt
           {
             echo 'source=official Debian trixie repositories'
+            echo 'install_mode=required dependencies only; no recommends'
             echo 'kicad_package=9.0.2+dfsg-1'
             echo 'architecture=amd64'
             echo "package_count=$(find /work/debs -maxdepth 1 -type f -name '*.deb' | wc -l)"
           } > /work/MANIFEST.txt
-          tar -C /work -cJf "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs.tar.xz" debs DEB_SHA256SUMS.txt MANIFEST.txt
-          sha256sum "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs.tar.xz" > "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs.tar.xz.sha256"
+          tar -C /work -cJf "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs_required.tar.xz" debs DEB_SHA256SUMS.txt MANIFEST.txt
+          sha256sum "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs_required.tar.xz" > "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs_required.tar.xz.sha256"
 
       - name: Upload verified Debian package bundle
         uses: actions/upload-artifact@v4
         with:
-          name: kicad-9.0.2-debian-trixie-debs
+          name: kicad-9.0.2-debian-trixie-required-debs
           path: |
-            kicad_9.0.2_debian_trixie_debs.tar.xz
-            kicad_9.0.2_debian_trixie_debs.tar.xz.sha256
+            kicad_9.0.2_debian_trixie_debs_required.tar.xz
+            kicad_9.0.2_debian_trixie_debs_required.tar.xz.sha256
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
