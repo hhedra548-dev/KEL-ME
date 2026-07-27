@@ -1,0 +1,43 @@
+name: PiFano KiCad Debian Supplement
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/pifano-kicad-systemd-supplement.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-supplement:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+    steps:
+      - name: Download exact official supplement
+        shell: bash
+        run: |
+          set -euxo pipefail
+          apt-get update
+          mkdir -p "$GITHUB_WORKSPACE/debs"
+          cd "$GITHUB_WORKSPACE/debs"
+          apt-get download libsystemd0=257.13-1~deb13u1
+          DEB=$(find . -maxdepth 1 -type f -name 'libsystemd0_257.13-1~deb13u1_amd64.deb' -print -quit)
+          test -n "$DEB"
+          test "$(dpkg-deb -f "$DEB" Package)" = "libsystemd0"
+          test "$(dpkg-deb -f "$DEB" Version)" = "257.13-1~deb13u1"
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "amd64"
+          sha256sum "$DEB" > "$GITHUB_WORKSPACE/DEB_SHA256SUMS.txt"
+
+      - name: Upload verified supplement
+        uses: actions/upload-artifact@v4
+        with:
+          name: kicad-9.0.2-debian-trixie-systemd-supplement
+          path: |
+            debs/*.deb
+            DEB_SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0

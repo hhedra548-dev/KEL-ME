@@ -1,0 +1,58 @@
+name: PiFano KiCad 9.0.2 Debian Packages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/pifano-kicad-9-0-2-debs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-kicad:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+    steps:
+      - name: Download exact official Debian packages
+        shell: bash
+        run: |
+          set -euxo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates xz-utils
+          mkdir -p /work/debs/partial
+          apt-get -y --download-only --no-install-recommends \
+            -o Dir::Cache::archives=/work/debs/ \
+            install kicad=9.0.2+dfsg-1
+
+          KICAD_DEB=$(find /work/debs -maxdepth 1 -type f -name 'kicad_9.0.2+dfsg-1_amd64.deb' -print -quit)
+          test -n "$KICAD_DEB"
+          test "$(stat -c %s "$KICAD_DEB")" = "41439008"
+          echo '8a4f0c143cc01806926895339f62cfd2db02bc8c50a095f105db5d7450dab1da  '"$KICAD_DEB" | sha256sum -c -
+          test "$(dpkg-deb -f "$KICAD_DEB" Package)" = "kicad"
+          test "$(dpkg-deb -f "$KICAD_DEB" Version)" = "9.0.2+dfsg-1"
+          test "$(dpkg-deb -f "$KICAD_DEB" Architecture)" = "amd64"
+
+          find /work/debs -maxdepth 1 -type f -name '*.deb' -print0 | sort -z | xargs -0 sha256sum > /work/DEB_SHA256SUMS.txt
+          {
+            echo 'source=official Debian trixie repositories'
+            echo 'install_mode=required dependencies only; no recommends'
+            echo 'kicad_package=9.0.2+dfsg-1'
+            echo 'architecture=amd64'
+            echo "package_count=$(find /work/debs -maxdepth 1 -type f -name '*.deb' | wc -l)"
+          } > /work/MANIFEST.txt
+          tar -C /work -cJf "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs_required.tar.xz" debs DEB_SHA256SUMS.txt MANIFEST.txt
+          sha256sum "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs_required.tar.xz" > "$GITHUB_WORKSPACE/kicad_9.0.2_debian_trixie_debs_required.tar.xz.sha256"
+
+      - name: Upload verified Debian package bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: kicad-9.0.2-debian-trixie-required-debs
+          path: |
+            kicad_9.0.2_debian_trixie_debs_required.tar.xz
+            kicad_9.0.2_debian_trixie_debs_required.tar.xz.sha256
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
