@@ -1,0 +1,81 @@
+name: PiFano KiCad 9 Native DRC
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/pifano-kicad-drc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-drc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore Tur199 fixture from isolated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pifano-ci/reports
+          git fetch origin pifano-kicad-ci
+          git show origin/pifano-kicad-ci:pifano-ci/local_fixture.xz.b64 > pifano-ci/local_fixture.xz.b64
+          base64 --decode pifano-ci/local_fixture.xz.b64 > pifano-ci/local_fixture.xz
+          xz --decompress --stdout pifano-ci/local_fixture.xz > pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb
+          sha256sum pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb | tee pifano-ci/reports/fixture.sha256
+
+      - name: Pull official KiCad 9.0.9 image
+        shell: bash
+        run: docker pull kicad/kicad:9.0.9
+
+      - name: Run KiCad version and native DRC
+        id: drc
+        shell: bash
+        run: |
+          set -uo pipefail
+          IMAGE='kicad/kicad:9.0.9'
+          BOARD='/work/pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb'
+          REPORT='/work/pifano-ci/reports/TUR199_NATIVE_DRC.rpt'
+
+          if docker run --rm "$IMAGE" version --format about > pifano-ci/reports/kicad-version.txt 2>&1; then
+            KICAD=(docker run --rm -v "$PWD:/work" -w /work "$IMAGE")
+          else
+            docker run --rm --entrypoint kicad-cli "$IMAGE" version --format about > pifano-ci/reports/kicad-version.txt 2>&1
+            KICAD=(docker run --rm -v "$PWD:/work" -w /work --entrypoint kicad-cli "$IMAGE")
+          fi
+
+          set +e
+          "${KICAD[@]}" pcb drc \
+            --output "$REPORT" \
+            --format report \
+            --severity-all \
+            --exit-code-violations \
+            "$BOARD" \
+            > pifano-ci/reports/kicad-drc-stdout.log 2>&1
+          rc=$?
+          set -e
+
+          printf '%s\n' "$rc" | tee pifano-ci/reports/drc-exit-code.txt
+          cat pifano-ci/reports/kicad-version.txt
+          cat pifano-ci/reports/kicad-drc-stdout.log
+          test -f pifano-ci/reports/TUR199_NATIVE_DRC.rpt && cat pifano-ci/reports/TUR199_NATIVE_DRC.rpt || true
+          exit "$rc"
+
+      - name: Upload KiCad DRC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pifano-tur199-native-drc
+          path: |
+            pifano-ci/reports/**
+            pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb
+          if-no-files-found: error
+          retention-days: 30
