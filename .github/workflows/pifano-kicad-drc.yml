@@ -34,6 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p pifano-ci/reports
+          chmod 0777 pifano-ci/reports
           git fetch origin pifano-kicad-ci
           git show origin/pifano-kicad-ci:pifano-ci/local_fixture.xz.b64 > pifano-ci/local_fixture.xz.b64
           base64 --decode pifano-ci/local_fixture.xz.b64 > pifano-ci/local_fixture.xz
