@@ -22,7 +22,7 @@ permissions:
 jobs:
   native-drc:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -77,6 +77,28 @@ jobs:
           cat pifano-ci/reports/kicad-drc-stdout.log
           test -f pifano-ci/reports/TUR199_NATIVE_DRC.rpt && cat pifano-ci/reports/TUR199_NATIVE_DRC.rpt || true
           exit "$rc"
+
+      - name: Export portable KiCad 9.0.9 root filesystem
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker rm -f pifano-kicad-rootfs >/dev/null 2>&1 || true
+          docker create --name pifano-kicad-rootfs kicad/kicad:9.0.9 >/dev/null
+          docker export pifano-kicad-rootfs | xz -T0 -3 > pifano-ci/kicad-9.0.9-rootfs.tar.xz
+          docker rm pifano-kicad-rootfs >/dev/null
+          sha256sum pifano-ci/kicad-9.0.9-rootfs.tar.xz | tee pifano-ci/kicad-9.0.9-rootfs.tar.xz.sha256
+          ls -lh pifano-ci/kicad-9.0.9-rootfs.tar.xz
+
+      - name: Upload portable KiCad root filesystem
+        uses: actions/upload-artifact@v4
+        with:
+          name: pifano-kicad-9-0-9-rootfs
+          path: |
+            pifano-ci/kicad-9.0.9-rootfs.tar.xz
+            pifano-ci/kicad-9.0.9-rootfs.tar.xz.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
 
       - name: Upload KiCad DRC evidence
         if: always()
