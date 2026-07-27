@@ -7,6 +7,12 @@ on:
     paths:
       - 'pifano-ci/**'
       - '.github/workflows/pifano-kicad-drc.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'pifano-ci/**'
+      - '.github/workflows/pifano-kicad-drc.yml'
   workflow_dispatch:
 
 permissions:
@@ -19,6 +25,8 @@ jobs:
     steps:
       - name: Checkout candidate
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Restore native KiCad fixture
         shell: bash
@@ -39,7 +47,6 @@ jobs:
         run: |
           set -uo pipefail
           IMAGE='kicad/kicad:9.0.9'
-          REPORT_DIR="$PWD/pifano-ci/reports"
           BOARD='/work/pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb'
           REPORT='/work/pifano-ci/reports/TUR199_NATIVE_DRC.rpt'
 
@@ -64,7 +71,7 @@ jobs:
           printf '%s\n' "$rc" | tee pifano-ci/reports/drc-exit-code.txt
           cat pifano-ci/reports/kicad-version.txt
           cat pifano-ci/reports/kicad-drc-stdout.log
-          test -f "$REPORT_DIR/TUR199_NATIVE_DRC.rpt" && cat "$REPORT_DIR/TUR199_NATIVE_DRC.rpt" || true
+          test -f pifano-ci/reports/TUR199_NATIVE_DRC.rpt && cat pifano-ci/reports/TUR199_NATIVE_DRC.rpt || true
           exit "$rc"
 
       - name: Upload KiCad DRC evidence
