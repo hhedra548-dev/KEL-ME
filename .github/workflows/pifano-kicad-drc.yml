@@ -3,6 +3,7 @@ name: PiFano KiCad 9 Native DRC
 on:
   push:
     branches:
+      - main
       - pifano-kicad-ci
     paths:
       - 'pifano-ci/**'
@@ -23,16 +24,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout candidate
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Restore native KiCad fixture
+      - name: Restore Tur199 fixture from isolated branch
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p pifano-ci/reports
+          git fetch origin pifano-kicad-ci
+          git show origin/pifano-kicad-ci:pifano-ci/local_fixture.xz.b64 > pifano-ci/local_fixture.xz.b64
           base64 --decode pifano-ci/local_fixture.xz.b64 > pifano-ci/local_fixture.xz
           xz --decompress --stdout pifano-ci/local_fixture.xz > pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb
           sha256sum pifano-ci/PiFano_Tur199_BOOT0_LOCAL_NATIVE_DRC_FIXTURE.kicad_pcb | tee pifano-ci/reports/fixture.sha256
