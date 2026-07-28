@@ -78,6 +78,31 @@ jobs:
           test -f pifano-ci/reports/TUR199_NATIVE_DRC.rpt && cat pifano-ci/reports/TUR199_NATIVE_DRC.rpt || true
           exit "$rc"
 
+      - name: Download official TI SPICE models
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pifano-ci/ti-models
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output pifano-ci/ti-models/SLUM894_LMR51410_PSPICE.zip \
+            'https://www.ti.com/lit/zip/slum894'
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output pifano-ci/ti-models/SBVM831_TLV75533_UNENCRYPTED_PSPICE.zip \
+            'https://www.ti.com/lit/zip/sbvm831'
+          unzip -t pifano-ci/ti-models/SLUM894_LMR51410_PSPICE.zip
+          unzip -t pifano-ci/ti-models/SBVM831_TLV75533_UNENCRYPTED_PSPICE.zip
+          sha256sum pifano-ci/ti-models/* | tee pifano-ci/ti-models/SHA256SUMS.txt
+          ls -lh pifano-ci/ti-models
+
+      - name: Upload TI SPICE models
+        uses: actions/upload-artifact@v4
+        with:
+          name: pifano-ti-spice-models
+          path: pifano-ci/ti-models/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
       - name: Export portable KiCad 9.0.9 root filesystem
         shell: bash
         run: |
