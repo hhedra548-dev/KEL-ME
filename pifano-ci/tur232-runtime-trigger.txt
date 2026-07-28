@@ -1,0 +1,3 @@
+PiFano Tur 232 portable KiCad 9.0.9 runtime export trigger.
+No PCB, schematic, BOM, or proprietary project data is included.
+Date: 2026-07-28
