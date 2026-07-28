@@ -1,0 +1,42 @@
+name: PiFano Fetch TI SPICE Models
+
+on:
+  push:
+    branches:
+      - pifano-runtime-export-tur232
+    paths:
+      - '.github/workflows/pifano-fetch-ti-models.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download official TI models
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ti-models
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output ti-models/SLUM894_LMR51410_PSPICE.zip \
+            'https://www.ti.com/lit/zip/slum894'
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output ti-models/SBVM831_TLV75533_UNENCRYPTED_PSPICE.zip \
+            'https://www.ti.com/lit/zip/sbvm831'
+          unzip -t ti-models/SLUM894_LMR51410_PSPICE.zip
+          unzip -t ti-models/SBVM831_TLV75533_UNENCRYPTED_PSPICE.zip
+          sha256sum ti-models/* | tee ti-models/SHA256SUMS.txt
+          ls -lh ti-models
+
+      - name: Upload TI models
+        uses: actions/upload-artifact@v4
+        with:
+          name: pifano-ti-spice-models
+          path: ti-models/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
